@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
 import { authService } from '../services/auth'
 
+function normalizeUser(payload) {
+  if (!payload || !payload.user) {
+    return null
+  }
+
+  return payload.user.data || payload.user
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
@@ -15,7 +23,7 @@ export const useAuthStore = defineStore('auth', {
       await authService.login(payload.email, payload.password)
       const data = await authService.me()
 
-      this.user = data.user.data
+      this.user = normalizeUser(data)
       this.permissions = data.permissions || []
       this.initialized = true
     },
@@ -23,7 +31,7 @@ export const useAuthStore = defineStore('auth', {
     async fetchMe() {
       try {
         const data = await authService.me()
-        this.user = data.user.data
+        this.user = normalizeUser(data)
         this.permissions = data.permissions || []
       } catch {
         this.user = null

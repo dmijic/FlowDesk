@@ -1,6 +1,6 @@
 # FlowDesk
 
-FlowDesk je monorepo aplikacija za interne zahtjeve (`IT pristup`, `nabava`, `putni nalog`) s višerazinskim odobravanjima, audit trailom, notifikacijama i reportingom.
+FlowDesk is a monorepo application for internal service requests (`IT access`, `procurement`, `travel orders`) with multi-level approvals, audit trail, notifications, and reporting.
 
 ## Stack
 - Backend: Laravel 11 API, PHP 8.3, Sanctum
@@ -10,7 +10,7 @@ FlowDesk je monorepo aplikacija za interne zahtjeve (`IT pristup`, `nabava`, `pu
 - Mail: Mailhog
 - Reverse proxy: Nginx
 
-## Monorepo struktura
+## Monorepo Structure
 
 ```text
 /
@@ -24,50 +24,50 @@ FlowDesk je monorepo aplikacija za interne zahtjeve (`IT pristup`, `nabava`, `pu
   .env.example
 ```
 
-## Brzi start
+## Quick Start
 
 ```bash
 make setup
 ```
 
-Alternativa:
+Alternative:
 
 ```bash
 ./scripts/setup.sh
 ```
 
-Setup radi:
-1. Podizanje Docker servisa (`nginx`, `php`, `mysql`, `node`, `mailhog`, `queue`, `scheduler`)
-2. `composer install`
-3. `php artisan key:generate`
-4. `php artisan migrate:fresh --seed`
-5. `npm install` za frontend
+Setup performs:
+1. Starts Docker services (`nginx`, `php`, `mysql`, `node`, `mailhog`, `queue`, `scheduler`)
+2. Runs `composer install`
+3. Runs `php artisan key:generate`
+4. Runs `php artisan migrate:fresh --seed`
+5. Runs frontend `npm install`
 
-## URL-ovi
-- Frontend preko nginx: `http://localhost`
-- Frontend direktno Vite: `http://localhost:5173`
+## URLs
+- Frontend via nginx: `http://localhost`
+- Frontend via Vite dev server: `http://localhost:5173`
 - Backend API: `http://localhost/api`
 - Mailhog UI: `http://localhost:8025`
 
-## Demo korisnici (seed)
-Svi imaju lozinku: `Password123!`
+## Demo Users (Seeded)
+All users share the same password: `Password123!`
 
 - Admin: `admin@flowdesk.local`
 - Process Owner: `owner1@flowdesk.local`, `owner2@flowdesk.local`
 - Approver: `approver1@flowdesk.local` ... `approver4@flowdesk.local`
 - Requester: `requester1@flowdesk.local` ... `requester10@flowdesk.local`
 
-## Što se seeda
+## Seeded Data
 - 1 admin
-- 2 process owner
-- 4 approver
-- 10 requester
-- 3 departmenta
-- 5 request type-a
-- 3 workflow definicije (`any/all`, `parallel/non-parallel`)
-- 25 demo requestova + approval taskovi + audit logovi + in-app notifikacije
+- 2 process owners
+- 4 approvers
+- 10 requesters
+- 3 departments
+- 5 request types
+- 3 workflow definitions (`any/all`, `parallel/non-parallel`)
+- 25 demo requests + approval tasks + audit logs + in-app notifications
 
-## API ruta mapa
+## API Route Map
 - `GET /sanctum/csrf-cookie`
 - `POST /auth/login`
 - `POST /auth/logout`
@@ -89,65 +89,65 @@ Svi imaju lozinku: `Password123!`
 - `GET /api/reports/requests.csv`
 - `GET /api/audit-logs`
 
-## Testovi
-Pokretanje feature testova:
+## Tests
+Run feature tests with:
 
 ```bash
 make test
 ```
 
-Pokriti scenariji:
-- submit request -> kreira first-step taskove
-- `any` rule -> jedan approve kompletira step i skipa ostale
-- `all` rule -> treba sve approve odluke
-- reject odmah zatvara request i skipa preostale
-- permission denial (requester ne vidi tuđi request, approver ne može `manage_users`)
+Covered scenarios:
+- submit request -> creates first-step approval tasks
+- `any` rule -> one approval completes the step and skips remaining tasks
+- `all` rule -> all approvals are required
+- reject immediately closes request and skips remaining tasks
+- permission denial (requester cannot view other users' requests, approver cannot `manage_users`)
 
-## Sanctum SPA login checklist
-1. Otvori frontend na `http://localhost:5173`.
-2. Login flow mora imati redoslijed:
-   - `GET /sanctum/csrf-cookie` (200)
+## Sanctum SPA Login Checklist
+1. Open frontend on `http://localhost:5173`.
+2. Login flow must be:
+   - `GET /sanctum/csrf-cookie` (200/204)
    - `POST /auth/login` (200)
-3. U browseru provjeri cookies za `http://localhost`:
+3. In browser cookies for `http://localhost`, verify:
    - `XSRF-TOKEN`
-   - `flowdesk-session` (ili `{app}_session`)
-4. Nakon login-a `GET /me` mora vratiti user JSON.
-5. Logout (`POST /auth/logout`) mora završiti bez greške i sesija više ne smije biti validna.
+   - `flowdesk-session` (or `{app}_session`)
+4. After login, `GET /me` must return user JSON.
+5. Logout (`POST /auth/logout`) must succeed and session must no longer be valid.
 
-## Debug / cache clear
-Ako mijenjaš CORS/session/Sanctum config, očisti cache:
+## Debug / Cache Clear
+If you change CORS/session/Sanctum config, clear caches:
 
 ```bash
 docker compose exec php php artisan optimize:clear
 ```
 
-Ako vidiš auth greške u browseru:
-- `404 /auth/login` ili `404 /me`: provjeri da nginx prosljeđuje `/auth`, `/me`, `/sanctum` na Laravel (`docker/nginx/default.conf`) i restartaj nginx.
-- `502 /login`: frontend Vite servis nije spreman; provjeri `docker compose ps` i `docker compose logs node`.
+If you see auth errors in the browser:
+- `404 /auth/login` or `404 /me`: verify nginx forwards `/auth`, `/me`, `/sanctum` to Laravel (`docker/nginx/default.conf`) and restart nginx.
+- `502 /login`: Vite service is not ready; check `docker compose ps` and `docker compose logs node`.
 
-## Workflow engine (sažetak)
+## Workflow Engine (Summary)
 - `WorkflowEngine`:
-  - submit request
-  - kreira taskove za prvi/idući korak
-  - zaključuje request kao approved na zadnjem koraku
+  - submits requests
+  - creates tasks for first/next workflow step
+  - marks requests as approved on final step
 - `ApprovalService`:
-  - approve/reject logika
-  - `any/all` pravila
-  - skipanje taskova i zatvaranje requesta
+  - approve/reject logic
+  - `any/all` rule handling
+  - task skipping and request closing
 - `AuditLogger`:
-  - zapisuje actor/action/entity + before/after + metadata
+  - stores actor/action/entity + before/after + metadata
 
-## Kako dodati novi workflow
-1. Login kao `admin` ili `process owner`.
-2. Otvori `Admin -> Workflows`.
-3. Odaberi request type.
-4. Zalijepi/uredi `definition_json`.
-5. Označi `Active` ako treba postati trenutno aktivna verzija.
-6. Spremi.
+## Adding a New Workflow
+1. Login as `admin` or `process owner`.
+2. Open `Admin -> Workflows`.
+3. Choose request type.
+4. Paste/edit `definition_json`.
+5. Mark as `Active` if it should be current version.
+6. Save.
 
-Za JSON format vidi [docs/workflow-json.md](docs/workflow-json.md).
+For JSON format, see [docs/workflow-json.md](docs/workflow-json.md).
 
-## Dodatna dokumentacija
+## Additional Documentation
 - [docs/permissions.md](docs/permissions.md)
 - [docs/workflow-json.md](docs/workflow-json.md)
 - [docs/erd.md](docs/erd.md)
