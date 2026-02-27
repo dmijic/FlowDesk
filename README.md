@@ -121,6 +121,10 @@ Ako mijenjaš CORS/session/Sanctum config, očisti cache:
 docker compose exec php php artisan optimize:clear
 ```
 
+Ako vidiš auth greške u browseru:
+- `404 /auth/login` ili `404 /me`: provjeri da nginx prosljeđuje `/auth`, `/me`, `/sanctum` na Laravel (`docker/nginx/default.conf`) i restartaj nginx.
+- `502 /login`: frontend Vite servis nije spreman; provjeri `docker compose ps` i `docker compose logs node`.
+
 ## Workflow engine (sažetak)
 - `WorkflowEngine`:
   - submit request
