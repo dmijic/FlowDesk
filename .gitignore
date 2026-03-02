@@ -1,6 +1,13 @@
 .env
+.env.*
+!.env.example
+
 backend/.env
+backend/.env.*
+!backend/.env.example
 frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 backend/vendor
 backend/node_modules
@@ -11,5 +18,16 @@ backend/storage/logs/*.log
 backend/storage/framework/cache/*
 backend/storage/framework/sessions/*
 backend/storage/framework/views/*
+backend/storage/framework/testing/*
 
+backups/
+*.sql
+*.sql.gz
+*.tar.gz
+*.zip
+*.pem
+*.key
+.phpunit.result.cache
+.idea/
+.vscode/
 .DS_Store

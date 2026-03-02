@@ -1,153 +1,135 @@
 # FlowDesk
 
-FlowDesk is a monorepo application for internal service requests (`IT access`, `procurement`, `travel orders`) with multi-level approvals, audit trail, notifications, and reporting.
+FlowDesk is a monorepo web application for internal service requests such as IT access, procurement, and travel approvals. It includes multi-step workflows, audit logging, notifications, reporting, and a Docker-first local development setup.
 
-## Stack
-- Backend: Laravel 11 API, PHP 8.3, Sanctum
-- Frontend: Vue 3 + Vite + Pinia + Vue Router + Tailwind
-- DB: MySQL 8
-- Queue: database + worker container
-- Mail: Mailhog
-- Reverse proxy: Nginx
+## Features
+- Laravel 11 REST API with Sanctum session authentication
+- Vue 3 SPA with Pinia, Vue Router, and Tailwind CSS
+- Multi-step approval workflows with `any` / `all` rules
+- Audit trail and timeline per request
+- Database notifications and email notifications
+- CSV reporting and admin dashboards
+- Docker-based local development with MySQL, queue worker, scheduler, and Mailhog
 
-## Monorepo Structure
-
+## Repository Layout
 ```text
 /
-  backend/
-  frontend/
-  docker/
-  docs/
-  scripts/
-  docker-compose.yml
-  Makefile
-  .env.example
+  backend/               Laravel 11 API
+  frontend/              Vue 3 SPA
+  docker/                Nginx configs, Dockerfiles, entrypoints
+  docs/                  RBAC, workflow JSON, ERD, screenshots placeholder
+  scripts/               Setup, test, lint, build, production helper scripts
+  docker-compose.yml     Local development stack
+  docker-compose.prod.yml Production Docker stack
+  INSTALLATION.md        VPS deployment guide
+  README.md
+  LICENSE
 ```
 
-## Quick Start
+## Local Development
+### Prerequisites
+- Docker Engine + Docker Compose plugin
+- GNU Make
 
+### Setup
 ```bash
 make setup
 ```
 
-Alternative:
+This will:
+1. Start the local Docker services
+2. Install backend dependencies
+3. Generate the Laravel app key
+4. Run migrations and seed demo data
+5. Install frontend dependencies
 
+### Development URLs
+- Frontend via Vite: `http://localhost:5173`
+- Frontend via nginx: `http://localhost:8080`
+- Backend API: `http://localhost:8080/api`
+- Health endpoint: `http://localhost:8080/health`
+- Mailhog: `http://localhost:8025`
+
+### Common Commands
 ```bash
-./scripts/setup.sh
+make dev-up
+make dev-down
+make test
+make lint
+make build
 ```
 
-Setup performs:
-1. Starts Docker services (`nginx`, `php`, `mysql`, `node`, `mailhog`, `queue`, `scheduler`)
-2. Runs `composer install`
-3. Runs `php artisan key:generate`
-4. Runs `php artisan migrate:fresh --seed`
-5. Runs frontend `npm install`
+## Environment Configuration
+Only example env files are tracked in Git:
+- `.env.example`
+- `backend/.env.example`
+- `frontend/.env.example`
 
-## URLs
-- Frontend via nginx: `http://localhost`
-- Frontend via Vite dev server: `http://localhost:5173`
-- Backend API: `http://localhost/api`
-- Mailhog UI: `http://localhost:8025`
+Key frontend env:
+- `VITE_API_BASE_URL`
+  - Dev example: `http://localhost:8080`
+  - Production same-origin deployment: empty string
+  - Production separate API origin: `https://api.example.com`
 
-## Demo Users (Seeded)
-All users share the same password: `Password123!`
+Key backend env:
+- `APP_URL`
+- `FRONTEND_URL`
+- `APP_VERSION`
+- `TRUSTED_PROXIES`
+- `SESSION_SECURE_COOKIE`
+- `CORS_ALLOWED_ORIGINS`
+- `SANCTUM_STATEFUL_DOMAINS`
+
+## Demo Credentials
+All demo users use the password `Password123!`.
 
 - Admin: `admin@flowdesk.local`
 - Process Owner: `owner1@flowdesk.local`, `owner2@flowdesk.local`
 - Approver: `approver1@flowdesk.local` ... `approver4@flowdesk.local`
 - Requester: `requester1@flowdesk.local` ... `requester10@flowdesk.local`
 
-## Seeded Data
-- 1 admin
-- 2 process owners
-- 4 approvers
-- 10 requesters
-- 3 departments
-- 5 request types
-- 3 workflow definitions (`any/all`, `parallel/non-parallel`)
-- 25 demo requests + approval tasks + audit logs + in-app notifications
+## Login Flow
+Sanctum uses cookie-based session auth.
 
-## API Route Map
-- `GET /sanctum/csrf-cookie`
-- `POST /auth/login`
-- `POST /auth/logout`
-- `POST /auth/forgot-password`
-- `GET /me`
-- `CRUD /api/users`
-- `CRUD /api/departments`
-- `CRUD /api/request-types`
-- `CRUD /api/workflows`
-- `GET/POST /api/requests`
-- `GET /api/requests/{id}`
-- `POST /api/requests/{id}/submit`
-- `POST /api/requests/{id}/attachments`
-- `GET /api/attachments/{id}/download`
-- `GET /api/approvals/inbox`
-- `POST /api/approvals/tasks/{id}/approve`
-- `POST /api/approvals/tasks/{id}/reject`
-- `GET /api/reports/summary`
-- `GET /api/reports/requests.csv`
-- `GET /api/audit-logs`
+Expected browser flow:
+1. `GET /sanctum/csrf-cookie`
+2. `POST /auth/login`
+3. `GET /me`
+4. `POST /auth/logout`
 
-## Tests
-Run feature tests with:
+Verify in browser cookies:
+- `XSRF-TOKEN`
+- `flowdesk-session` (or `<app>_session`)
 
-```bash
-make test
-```
+## Production Deployment
+Production deployment artifacts are included in the repo:
+- `Dockerfile` for the Laravel PHP-FPM app image
+- `docker/nginx/Dockerfile.prod` for the production nginx + SPA image
+- `docker-compose.prod.yml`
+- `docker/entrypoint.sh`
+- `docker/nginx/prod.conf`
 
-Covered scenarios:
-- submit request -> creates first-step approval tasks
-- `any` rule -> one approval completes the step and skips remaining tasks
-- `all` rule -> all approvals are required
-- reject immediately closes request and skips remaining tasks
-- permission denial (requester cannot view other users' requests, approver cannot `manage_users`)
+Use [INSTALLATION.md](INSTALLATION.md) for the full VPS deployment guide.
 
-## Sanctum SPA Login Checklist
-1. Open frontend on `http://localhost:5173`.
-2. Login flow must be:
-   - `GET /sanctum/csrf-cookie` (200/204)
-   - `POST /auth/login` (200)
-3. In browser cookies for `http://localhost`, verify:
-   - `XSRF-TOKEN`
-   - `flowdesk-session` (or `{app}_session`)
-4. After login, `GET /me` must return user JSON.
-5. Logout (`POST /auth/logout`) must succeed and session must no longer be valid.
-
-## Debug / Cache Clear
-If you change CORS/session/Sanctum config, clear caches:
-
-```bash
-docker compose exec php php artisan optimize:clear
-```
-
-If you see auth errors in the browser:
-- `404 /auth/login` or `404 /me`: verify nginx forwards `/auth`, `/me`, `/sanctum` to Laravel (`docker/nginx/default.conf`) and restart nginx.
-- `502 /login`: Vite service is not ready; check `docker compose ps` and `docker compose logs node`.
-
-## Workflow Engine (Summary)
-- `WorkflowEngine`:
-  - submits requests
-  - creates tasks for first/next workflow step
-  - marks requests as approved on final step
-- `ApprovalService`:
-  - approve/reject logic
-  - `any/all` rule handling
-  - task skipping and request closing
-- `AuditLogger`:
-  - stores actor/action/entity + before/after + metadata
-
-## Adding a New Workflow
-1. Login as `admin` or `process owner`.
-2. Open `Admin -> Workflows`.
-3. Choose request type.
-4. Paste/edit `definition_json`.
-5. Mark as `Active` if it should be current version.
-6. Save.
-
-For JSON format, see [docs/workflow-json.md](docs/workflow-json.md).
-
-## Additional Documentation
+## Documentation
+- [INSTALLATION.md](INSTALLATION.md)
 - [docs/permissions.md](docs/permissions.md)
 - [docs/workflow-json.md](docs/workflow-json.md)
 - [docs/erd.md](docs/erd.md)
+
+## Screenshots
+Screenshots are intentionally not committed yet. Add project screenshots under `docs/screenshots/` before publishing screenshots in GitHub documentation.
+
+## Security
+- Do not commit `.env` files, private keys, certificates, database dumps, or backup archives.
+- Use GitHub private vulnerability reporting or another private maintainer channel for security disclosures. Do not open public issues for unpatched vulnerabilities.
+- Minimum production recommendations:
+  - `APP_DEBUG=false`
+  - unique `APP_KEY`
+  - strong database credentials
+  - `SESSION_SECURE_COOKIE=true` when using HTTPS
+  - restricted `CORS_ALLOWED_ORIGINS`
+  - regular database and storage backups
+
+## License
+This repository is licensed under the MIT License. See [LICENSE](LICENSE).

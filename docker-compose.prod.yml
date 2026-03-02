@@ -1,0 +1,97 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flowdesk-php-prod
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      CONTAINER_ROLE: app
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEED: ${RUN_SEED:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - backend_storage:/var/www/backend/storage
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  queue:
+    image: flowdesk-php-prod
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      CONTAINER_ROLE: queue
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      php:
+        condition: service_started
+    volumes:
+      - backend_storage:/var/www/backend/storage
+
+  scheduler:
+    image: flowdesk-php-prod
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      CONTAINER_ROLE: scheduler
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      php:
+        condition: service_started
+    volumes:
+      - backend_storage:/var/www/backend/storage
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_APP_NAME: ${VITE_APP_NAME:-FlowDesk}
+    restart: unless-stopped
+    depends_on:
+      php:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+    volumes:
+      - backend_storage:/var/www/backend/storage:ro
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-flowdesk}
+      MYSQL_USER: ${MYSQL_USER:-flowdesk}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-flowdesk}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  backend_storage:
+  mysql_data:

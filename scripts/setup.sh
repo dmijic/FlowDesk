@@ -8,7 +8,11 @@ cp -n .env.example .env || true
 cp -n backend/.env.example backend/.env || true
 cp -n frontend/.env.example frontend/.env || true
 
-echo "[flowdesk] Starting containers..."
+set -a
+. ./.env
+set +a
+
+echo "[flowdesk] Starting development containers..."
 docker compose up -d --build
 
 echo "[flowdesk] Waiting for MySQL healthcheck..."
@@ -37,7 +41,7 @@ echo "[flowdesk] Installing frontend dependencies..."
 docker compose exec -T node npm install
 
 echo "[flowdesk] Setup complete"
-echo "Frontend (nginx): http://localhost"
-echo "Frontend (vite):  http://localhost:5173"
-echo "API:              http://localhost/api"
-echo "Mailhog:          http://localhost:8025"
+echo "Frontend (nginx): http://localhost:${APP_PORT:-8080}"
+echo "Frontend (vite):  http://localhost:${VITE_PORT:-5173}"
+echo "API:              http://localhost:${APP_PORT:-8080}/api"
+echo "Mailhog:          http://localhost:${MAILHOG_HTTP_PORT:-8025}"

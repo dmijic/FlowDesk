@@ -1,4 +1,4 @@
-import { http } from './http'
+import { http, resolvedApiBaseUrl } from './http'
 
 function normalizePath(path) {
   if (path.startsWith('/api') || path.startsWith('/auth') || path.startsWith('/sanctum') || path === '/me') {
@@ -40,6 +40,7 @@ export async function api(path, options = {}) {
 }
 
 export function fileDownloadUrl(attachmentId) {
-  const base = (import.meta.env.VITE_BACKEND_URL || 'http://localhost').replace(/\/$/, '')
-  return `${base}/api/attachments/${attachmentId}/download`
+  const path = `/api/attachments/${attachmentId}/download`
+
+  return resolvedApiBaseUrl ? `${resolvedApiBaseUrl}${path}` : path
 }
